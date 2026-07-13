@@ -61,6 +61,13 @@ national_id_validator = RegexValidator(r"^\d{10}$", "National ID must be exactly
 
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="profile")
+    advisor = models.ForeignKey(
+    CustomUser,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="students",
+    )
     birth_year = models.PositiveIntegerField(
         null=True,
         blank=True,

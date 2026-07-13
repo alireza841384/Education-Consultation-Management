@@ -14,10 +14,6 @@ class Schedule(models.Model):
 
     end_date = models.DateField()
 
-    is_locked = models.BooleanField(
-        default=False,
-    )
-
     created_at = models.DateTimeField(
         auto_now_add=True,
     )

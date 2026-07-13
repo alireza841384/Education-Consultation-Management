@@ -146,3 +146,9 @@ STATIC_URL = 'static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+MAX_REPORT_FILE_SIZE = 2 * 1024 * 1024
+
+ALLOWED_REPORT_EXTENSIONS = [
+    ".pdf",
+]

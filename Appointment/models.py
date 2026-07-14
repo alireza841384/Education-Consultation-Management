@@ -24,6 +24,11 @@ class Schedule(models.Model):
 
     class Meta:
         ordering = ["-start_date"]
+        constraints = [
+        models.CheckConstraint(
+            condition=models.Q(end_date__gte=models.F("start_date")),
+            name="schedule_end_after_start",
+        ),]
 
     def __str__(self):
         return (
@@ -58,9 +63,16 @@ class AppointmentSlot(models.Model):
     )
 
     class Meta:
-        ordering = [
-            "date",
-            "start_time",
+        ordering = ["date", "start_time"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["schedule", "date", "start_time"],
+                name="unique_slot_per_schedule",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(end_time__gt=models.F("start_time")),
+                name="slot_end_after_start",
+            ),
         ]
 
     def __str__(self):
@@ -88,7 +100,7 @@ class Appointment(models.Model):
     )
 
     updated_at = models.DateTimeField(
-        auto_now_add=True,
+        auto_now=True,
     )
 
     class Meta:

@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
-from .models import Schedule
+from .models import AppointmentSlot, Schedule , Appointment
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
@@ -73,3 +73,48 @@ class ScheduleSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+    
+class AppointmentSlotSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Appointment
+        fields = ["date", "start_time", "end_time"]
+    
+    def validate(self, attrs):
+        if attrs["date"] < timezone.localdate():
+            raise serializers.ValidationError(
+                {
+                    "date": "Appointment date cannot be in the past."
+                }
+            )
+        if attrs["start_time"] >= attrs["end_time"]:
+            raise serializers.ValidationError(
+                {
+                    "end_time": "End time must be after start time."
+                }
+            )
+        if attrs["date"] > self.context["schedule"].end_date or attrs["date"] < self.context["schedule"].start_date:
+            raise serializers.ValidationError(
+                {
+                    "date": "Appointment date must be within the schedule's date range."
+                }
+            )
+        if Appointment.objects.filter(
+            schedule=self.context["schedule"],
+            date=attrs["date"],
+            start_time__lt=attrs["end_time"],
+            end_time__gt=attrs["start_time"],
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "non_field_errors": "This appointment slot overlaps with another slot."
+                }
+            )
+        if attrs["start_time"] < timezone.now().time() and attrs["date"] == timezone.localdate():
+            raise serializers.ValidationError(
+                {
+                    "start_time": "Appointment start time cannot be in the past."
+                }
+            )
+
+        return  attrs

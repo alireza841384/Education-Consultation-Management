@@ -6,4 +6,4 @@ class LoginThrottle(AnonRateThrottle):
 
 
 class RegisterThrottle(AnonRateThrottle):
-    rate = "10/hour"
+    rate = "10/min"

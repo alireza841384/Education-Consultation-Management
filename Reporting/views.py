@@ -1,4 +1,4 @@
-from rest_framework.generics import ModelViewSet
+from rest_framework.views import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from Accounts.models import CustomUser
@@ -8,7 +8,7 @@ from .models import Report
 class ReportingViewSet(ModelViewSet):
     serializer_class = ReportingSerializer
     permission_classes = [IsAuthenticated]
-    query_set = Report.objects.all()
+    queryset = Report.objects.all()
 
     def get_queryset(self):
         user = self.request.user

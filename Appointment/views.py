@@ -1,36 +1,75 @@
-from django.http import HttpResponseForbidden
-
-from Accounts.models import CustomUser
-
-from .serializers import AppointmentSerializer , ScheduleSerializer, AppointmentSlotSerializer
-from .models import Appointment, Schedule, AppointmentSlot
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
-from Accounts.permissions import IsAdvisorOwner
+from rest_framework.response import Response
 
-class ScheduleViewSet(ModelViewSet):
-    serializer_class = ScheduleSerializer
-    permission_classes = [IsAuthenticated, IsAdvisorOwner]
+from .models import Schedule
+from .serializers import ScheduleSerializer, GenerateSlotsSerializer
+from .services.slot_generation import SlotGenerationService
+
+
+class ScheduleViewSet(viewsets.ModelViewSet):
     queryset = Schedule.objects.select_related("advisor")
+    serializer_class = ScheduleSerializer
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="generate-slots",
+    )
+    def generate_slots(self, request, pk=None):
+        schedule = self.get_object()
 
-        if user.type == CustomUser.Types.ADMIN:
-            return self.queryset.filter(advisor=user)
+        if not self._can_manage_schedule(request.user, schedule):
+            return Response(
+                {
+                    "detail": (
+                        "You do not have permission to manage this schedule."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        advisor = user.profile.advisor
+        if schedule.status != Schedule.Status.DRAFT:
+            return Response(
+                {
+                    "detail": (
+                        "Slots can only be generated while the schedule "
+                        "is in draft status."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        if advisor is None:
-            return self.queryset.none()
+        serializer = GenerateSlotsSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "schedule": schedule,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
 
-        return self.queryset.filter(
-            advisor=advisor,
+        result = SlotGenerationService.generate_slots(
+            schedule=schedule,
+            actor=request.user,
+            **serializer.validated_data,
         )
 
-    def perform_create(self, serializer):
-        serializer.save(
-            advisor=self.request.user,
+        return Response(
+            {
+                "schedule_id": schedule.id,
+                "created": result["created_count"],
+                "duplicates": result["duplicates_count"],
+                "total": result["total_requested"],
+            },
+            status=status.HTTP_201_CREATED,
         )
 
-
+    def _can_manage_schedule(self, user, schedule):
+        return (
+            user.is_staff
+            or user.is_superuser
+            or schedule.advisor_id == user.id
+        )

@@ -65,3 +65,16 @@ PATCH   /api/appointments/{appointment_id}/
 DELETE  /api/appointments/{appointment_id}/
 
 """
+
+from rest_framework.routers import DefaultRouter
+
+from .views import ScheduleViewSet
+
+router = DefaultRouter()
+router.register(
+    "schedules",
+    ScheduleViewSet,
+    basename="schedule",
+)
+
+urlpatterns = router.urls

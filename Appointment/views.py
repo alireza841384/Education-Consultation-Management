@@ -11,21 +11,20 @@ from Accounts.permissions import IsAdvisorOwner
 class ScheduleViewSet(ModelViewSet):
     serializer_class = ScheduleSerializer
     permission_classes = [IsAuthenticated, IsAdvisorOwner]
+    queryset = Schedule.objects.select_related("advisor")
 
     def get_queryset(self):
         user = self.request.user
 
         if user.type == CustomUser.Types.ADMIN:
-            return Schedule.objects.filter(
-                advisor=user,
-            )
+            return self.queryset.filter(advisor=user)
 
         advisor = user.profile.advisor
 
         if advisor is None:
-            return Schedule.objects.none()
+            return self.queryset.none()
 
-        return Schedule.objects.filter(
+        return self.queryset.filter(
             advisor=advisor,
         )
 

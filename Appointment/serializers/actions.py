@@ -70,8 +70,6 @@ class GenerateSlotsSerializer(serializers.Serializer):
 
         return attrs
 
-from rest_framework import serializers
-
 
 class CopySlotsSerializer(serializers.Serializer):
     source_date = serializers.DateField(

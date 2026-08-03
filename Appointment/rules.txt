@@ -1,0 +1,341 @@
+=====================================================================
+                 SLOT GENERATION BUSINESS RULES
+=====================================================================
+
+Feature:
+Generate Appointment Slots
+
+Version:
+1.0
+
+=====================================================================
+Rule 1 - Authorization
+=====================================================================
+
+Only the owner advisor (Admin) of a schedule is allowed to generate
+appointment slots.
+
+Students are not allowed to use this endpoint.
+
+=====================================================================
+Rule 2 - Schedule Status
+=====================================================================
+
+Slots only be generated before schedule published.
+Slots be generated in draft mode.
+Slots can be reseved in publish mode.
+
+=====================================================================
+Rule 3 - Schedule Date Range
+=====================================================================
+
+Every generated slot must belong to a date inside
+
+schedule.start_date
+
+↓
+
+schedule.end_date
+
+No slot may be generated outside the schedule range.
+
+=====================================================================
+Rule 4 - Time Range Validation
+=====================================================================
+
+Every time range must satisfy
+
+start_time < end_time
+
+Otherwise the request is invalid.
+
+=====================================================================
+Rule 5 - Time Range Overlap
+=====================================================================
+
+Time ranges must never overlap.
+
+Valid:
+
+08:00 → 12:00
+
+12:00 → 16:00
+
+Invalid:
+
+08:00 → 12:00
+
+11:30 → 14:00
+
+=====================================================================
+Rule 6 - Slot Duration
+=====================================================================
+
+slot_duration must be greater than zero.
+
+Examples:
+
+15
+20
+30
+45
+60
+
+=====================================================================
+Rule 7 - Break Duration
+=====================================================================
+
+break_duration must be greater than or equal to zero.
+
+Negative values are not allowed.
+
+=====================================================================
+Rule 8 - Partial Slots
+=====================================================================
+
+Only complete slots should be generated.
+
+Example
+
+Range
+
+08:00 → 09:10
+
+Slot Duration
+
+30 minutes
+
+Generated
+
+08:00 → 08:30
+
+08:30 → 09:00
+
+Not Generated
+
+09:00 → 09:30
+
+=====================================================================
+Rule 9 - Duplicate Slots
+=====================================================================
+
+If a slot already exists,
+
+do NOT raise an exception.
+
+Skip it.
+
+=====================================================================
+Rule 10 - Atomic Transaction
+=====================================================================
+
+The whole generation process must run inside
+
+transaction.atomic()
+
+If anything fails,
+
+nothing should be created.
+
+=====================================================================
+Rule 11 - Bulk Create
+=====================================================================
+
+Generate every AppointmentSlot object in memory.
+
+After generation finishes,
+
+save them using
+
+bulk_create()
+
+Never call save() inside a loop.
+
+=====================================================================
+Rule 12 - Maximum Slots
+=====================================================================
+
+If
+
+max_slots = NULL
+
+↓
+
+No limit exists.
+
+If
+
+max_slots = N
+
+↓
+
+Generation stops after creating N slots.
+
+=====================================================================
+Rule 13 - Empty Time Ranges
+=====================================================================
+
+This request
+
+{
+    "ranges": []
+}
+
+is invalid.
+
+At least one time range is required.
+
+=====================================================================
+Rule 14 - Default Slot Status
+=====================================================================
+
+Every generated slot must be created with
+
+Status = AVAILABLE
+
+=====================================================================
+Rule 15 - Service Response
+=====================================================================
+
+The service should return statistics.
+
+Example
+
+{
+    "created": 18,
+    "duplicates": 2,
+    "total": 20
+}
+
+=====================================================================
+Rule 16 - Existing Slots
+=====================================================================
+
+Existing slots must never be overwritten.
+
+Regardless of whether they are
+
+AVAILABLE
+
+BOOKED
+
+CANCELLED
+
+they are treated as duplicates
+and skipped.
+
+=====================================================================
+Rule 17 - Logging
+=====================================================================
+
+Every successful generation should be logged.
+
+Example
+
+Advisor #5 generated 18 slots for Schedule #12
+
+=====================================================================
+Rule 18 - Idempotency
+=====================================================================
+
+Sending the exact same request multiple times
+
+must never create duplicate slots.
+
+Example
+
+First Request
+
+Created : 18
+
+Second Request
+
+Created : 0
+
+Duplicates : 18
+
+=====================================================================
+Rule 19 - Target Date Validation
+=====================================================================
+
+Every generated slot date must belong to
+the current schedule.
+
+Dates outside
+
+schedule.start_date
+
+↓
+
+schedule.end_date
+
+must be rejected.
+
+=====================================================================
+Rule 20 - Concurrency Protection
+=====================================================================
+
+If two generate requests are sent simultaneously
+for the same schedule,
+
+the system must never create duplicate slots.
+
+Concurrency should be handled using database
+constraints and transactional locking when needed.
+
+The operation must remain safe under concurrent requests.
+
+=====================================================================
+Rule 21 - Time Zone Consistency
+=====================================================================
+
+All date and time calculations must use the
+project's configured time zone.
+
+No comparison should be made between values
+belonging to different time zones.
+
+All generated slots must use a consistent timezone.
+
+=====================================================================
+Rule 22 - Audit Trail
+=====================================================================
+
+Every generation operation should be auditable.
+
+The system should record at least:
+
+- Advisor ID
+- Schedule ID
+- Request Time
+- Generated Slot Count
+- Duplicate Slot Count
+- Request Result (Success / Failed)
+
+These records are useful for debugging,
+monitoring and future reporting.
+
+
+=====================================================================
+Rule 23
+=====================================================================
+
+The SlotGenerationService must contain only business logic.
+
+It must not:
+
+- access request.data
+- access request.user
+- return HTTP responses
+- raise DRF Response objects
+
+The service receives validated data as input
+and returns plain Python objects or dictionaries.
+
+HTTP handling belongs to the View layer.
+Validation belongs to the Serializer layer.
+Business logic belongs to the Service layer.
+
+=====================================================================
+END OF DOCUMENT
+=====================================================================

@@ -1,3 +1,5 @@
+from django.http import HttpResponseForbidden
+
 from Accounts.models import CustomUser
 
 from .serializers import AppointmentSerializer , ScheduleSerializer, AppointmentSlotSerializer
@@ -12,17 +14,24 @@ class ScheduleViewSet(ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        
+
         if user.type == CustomUser.Types.ADMIN:
             return Schedule.objects.filter(
                 advisor=user,
             )
 
+        advisor = user.profile.advisor
+
+        if advisor is None:
+            return Schedule.objects.none()
+
         return Schedule.objects.filter(
-            advisor=user.profile.advisor,
+            advisor=advisor,
         )
 
     def perform_create(self, serializer):
         serializer.save(
             advisor=self.request.user,
         )
+
+

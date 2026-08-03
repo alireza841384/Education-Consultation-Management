@@ -4,6 +4,16 @@ from Accounts.models import CustomUser
 
 
 class Schedule(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+
     advisor = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -11,7 +21,6 @@ class Schedule(models.Model):
     )
 
     start_date = models.DateField()
-
     end_date = models.DateField()
 
     created_at = models.DateTimeField(
@@ -25,17 +34,18 @@ class Schedule(models.Model):
     class Meta:
         ordering = ["-start_date"]
         constraints = [
-        models.CheckConstraint(
-            condition=models.Q(end_date__gte=models.F("start_date")),
-            name="schedule_end_after_start",
-        ),]
+            models.CheckConstraint(
+                condition=models.Q(end_date__gte=models.F("start_date")),
+                name="schedule_end_after_start",
+            ),
+        ]
 
     def __str__(self):
         return (
             f"{self.advisor.email} | "
             f"{self.start_date} -> {self.end_date}"
         )
-    
+
 
 class AppointmentSlot(models.Model):
 

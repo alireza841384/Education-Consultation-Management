@@ -4,7 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Schedule
-from .serializers import ScheduleSerializer, GenerateSlotsSerializer
+from .serializers.model_serializers import ScheduleSerializer
+from .serializers.actions import GenerateSlotsSerializer
 from .services.slot_generation import SlotGenerationService
 
 

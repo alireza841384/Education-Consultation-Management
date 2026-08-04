@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
-from .models import AppointmentSlot, Schedule , Appointment
+from ..models import AppointmentSlot, Schedule , Appointment
 
 
 class ScheduleSerializer(serializers.ModelSerializer):

@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, time, date
 from django.db import transaction
-from models import AppointmentSlot, Schedule
+from ..models import AppointmentSlot, Schedule
 
 class SlotGenerationService:
     @staticmethod

@@ -70,6 +70,9 @@ from rest_framework.routers import DefaultRouter
 
 from .views import ScheduleViewSet
 
+app_name = "Appointment"
+
+
 router = DefaultRouter()
 router.register(
     "schedules",

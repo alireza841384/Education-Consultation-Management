@@ -1,67 +1,167 @@
-from datetime import timedelta, datetime, time, date
+from datetime import time, timedelta
+
 from django.db import transaction
-from ..models import AppointmentSlot, Schedule
+from django.db.models import Q
+
+from ..models import AppointmentSlot
+from ..models import Schedule
+
 
 class SlotGenerationService:
+    MINUTES_PER_HOUR = 60
+
+    @staticmethod
+    def _time_to_minutes(value: time) -> int:
+        return (
+            value.hour * SlotGenerationService.MINUTES_PER_HOUR
+            + value.minute
+        )
+
     @staticmethod
     def generate_slots(
-        schedule: Schedule, 
-        slot_duration: int, 
-        break_duration: int, 
-        max_slots: int | None, 
-        ranges: list[dict]
-    ) -> dict:
-        existing_slots = set(
-            AppointmentSlot.objects.filter(schedule=schedule)
-            .values_list('date', 'start_time')
-        )
-        
-        slots_to_create = []
-        stats = {
-            'total_requested': 0,
-            'created_count': 0,
-            'duplicates_count': 0
-        }
-        
-        step = slot_duration + break_duration
-        current_date = schedule.start_date
-        processed_ranges = []
-        for r in ranges:
-            start_m = r['start_time'].hour * 60 + r['start_time'].minute
-            end_m = r['end_time'].hour * 60 + r['end_time'].minute
-            processed_ranges.append((start_m, end_m))
+        *,
+        schedule,
+        slot_duration,
+        break_duration,
+        max_slots,
+        ranges,
+        date_start=None,
+        date_end=None,
+    ):
+        date_start = date_start or schedule.start_date
+        date_end = date_end or schedule.end_date
+
+        if date_start > date_end:
+            raise ValueError(
+                "date_start must be before or equal to date_end."
+            )
+
+        if (
+            date_start < schedule.start_date
+            or date_end > schedule.end_date
+        ):
+            raise ValueError(
+                "The requested date range must be within the schedule date range."
+            )
+
+        if slot_duration <= 0:
+            raise ValueError("slot_duration must be greater than zero.")
+
+        if break_duration < 0:
+            raise ValueError("break_duration cannot be negative.")
+
+        slot_interval = slot_duration + break_duration
+
+        processed_ranges = [
+            (
+                item["start_time"],
+                item["end_time"],
+            )
+            for item in ranges
+        ]
+
+        overlap_query = Q()
+
+        for range_start, range_end in processed_ranges:
+            overlap_query |= Q(
+                start_time__lt=range_end,
+                end_time__gt=range_start,
+            )
+
+        has_existing_slots = AppointmentSlot.objects.filter(
+            schedule=schedule,
+            date__gte=date_start,
+            date__lte=date_end,
+        ).filter(
+            overlap_query
+        ).exists()
+
+        if has_existing_slots:
+            raise ValueError(
+                "Delete the Slots that have overlap"
+            )
+
+        processed_ranges = [
+            (
+                SlotGenerationService._time_to_minutes(
+                    item["start_time"]
+                ),
+                SlotGenerationService._time_to_minutes(
+                    item["end_time"]
+                ),
+            )
+            for item in ranges
+        ]
+
+        slots_to_create: list[AppointmentSlot] = []
+
+        total_requested = 0
+        created_count = 0
+        duplicates_count = 0
+
+        reached_limit = False
+
+        current_date = date_start
 
         with transaction.atomic():
-            while current_date <= schedule.end_date:
-                for start_m, end_m in processed_ranges:
-                    current_range_time = start_m
-                    
-                    while current_range_time + slot_duration <= end_m:
-                        if max_slots is not None and stats['total_requested'] >= max_slots:
-                            return stats
-                        stats['total_requested'] += 1
-                        slot_start_dt = time(hour=current_range_time // 60, minute=current_range_time % 60)
-                        
-                        end_minutes = current_range_time + slot_duration
-                        slot_end_dt = time(hour=end_minutes // 60, minute=end_minutes % 60)
-                        if (current_date, slot_start_dt) in existing_slots:
-                            stats['duplicates_count'] += 1
-                        else:
-                            slots_to_create.append(
-                                AppointmentSlot(
-                                    schedule=schedule,
-                                    date=current_date,
-                                    start_time=slot_start_dt,
-                                    end_time=slot_end_dt,
-                                    status=AppointmentSlot.SlotStatus.AVAILABLE
-                                )
+            while current_date <= date_end and not reached_limit:
+                total_requested = 0
+
+                for range_start, range_end in processed_ranges:
+                    current_minute = range_start
+
+                    while current_minute + slot_duration <= range_end:
+                        if (
+                            max_slots is not None
+                            and total_requested >= max_slots
+                        ):
+                            reached_limit = True
+                            break
+
+                        total_requested += 1
+
+                        start_time = time(
+                            hour=current_minute
+                            // SlotGenerationService.MINUTES_PER_HOUR,
+                            minute=current_minute
+                            % SlotGenerationService.MINUTES_PER_HOUR,
+                        )
+
+                        end_minutes = current_minute + slot_duration
+
+                        end_time = time(
+                            hour=end_minutes
+                            // SlotGenerationService.MINUTES_PER_HOUR,
+                            minute=end_minutes
+                            % SlotGenerationService.MINUTES_PER_HOUR,
+                        )
+
+                        slots_to_create.append(
+                            AppointmentSlot(
+                                schedule=schedule,
+                                date=current_date,
+                                start_time=start_time,
+                                end_time=end_time,
+                                status=AppointmentSlot.SlotStatus.AVAILABLE,
                             )
-                            stats['created_count'] += 1
-                            existing_slots.add((current_date, slot_start_dt))
-                        current_range_time += step
-        
+                        )
+
+                        created_count += 1
+                        current_minute += slot_interval
+
+                    if reached_limit:
+                        break
+
                 current_date += timedelta(days=1)
+
             if slots_to_create:
-                AppointmentSlot.objects.bulk_create(slots_to_create)
-                
-        return stats
+                AppointmentSlot.objects.bulk_create(
+                    slots_to_create,
+                    batch_size=1000,
+                )
+
+        return {
+            "total_requested": total_requested,
+            "created_count": created_count,
+            "duplicates_count": duplicates_count,
+        }

@@ -2,74 +2,86 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
-from ..models import AppointmentSlot, Schedule , Appointment
+from ..models import Appointment
+from ..models import AppointmentSlot
+from ..models import Schedule
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Schedule
-
-        fields = [
+        fields = (
+            "id",
+            "advisor",
             "start_date",
             "end_date",
             "status",
             "created_at",
             "updated_at",
-        ]
+        )
 
-        read_only_fields = [
+        read_only_fields = (
+            "id",
+            "advisor",
+            "status",
             "created_at",
             "updated_at",
-        ]
+        )
 
     def validate(self, attrs):
+        instance = self.instance
 
-        if self.instance:
-            start_date = attrs.get(
-                "start_date",
-                self.instance.start_date,
-            )
+        advisor = (
+            instance.advisor
+            if instance
+            else self.context["request"].user
+        )
 
-            end_date = attrs.get(
-                "end_date",
-                self.instance.end_date,
-            )
-        else:
-            start_date = attrs["start_date"]
-            end_date = attrs["end_date"]
+        start_date = attrs.get(
+            "start_date",
+            instance.start_date if instance else None,
+        )
+
+        end_date = attrs.get(
+            "end_date",
+            instance.end_date if instance else None,
+        )
+        date_start = serializers.DateField(
+            required=False,
+            allow_null=True,
+        )
+
+        date_end = serializers.DateField(
+            required=False,
+            allow_null=True,
+        )
+
 
         if start_date > end_date:
             raise serializers.ValidationError(
                 {
-                    "end_date": "End date must be after start date."
+                    "end_date": (
+                        "End date must be after start date."
+                    )
                 }
             )
 
-        if start_date < timezone.localdate():
-            raise serializers.ValidationError(
-                {
-                    "start_date": "Start date cannot be in the past."
-                }
-            )
-
-        advisor = self.context["request"].user
-
-        schedules = Schedule.objects.filter(
+        overlaps = Schedule.objects.filter(
             advisor=advisor,
             start_date__lte=end_date,
             end_date__gte=start_date,
         )
 
-        if self.instance:
-            schedules = schedules.exclude(
-                pk=self.instance.pk,
-            )
+        if instance:
+            overlaps = overlaps.exclude(pk=instance.pk)
 
-        if schedules.exists():
+        if overlaps.exists():
             raise serializers.ValidationError(
                 {
-                    "start_date": "This schedule overlaps with another schedule."
+                    "start_date": (
+                        "This schedule overlaps with an existing schedule."
+                    )
                 }
             )
 
@@ -77,103 +89,146 @@ class ScheduleSerializer(serializers.ModelSerializer):
 
 
 class AppointmentSlotSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AppointmentSlot
-        fields = [
+        fields = (
+            "id",
             "date",
             "start_time",
             "end_time",
+            "date_start",
+            "date_end",
             "status",
-        ]
+        )
+
+        read_only_fields = (
+            "id",
+        )
 
     def validate(self, attrs):
         schedule = self.context["schedule"]
 
-        date = attrs.get("date")
-        start_time = attrs.get("start_time")
-        end_time = attrs.get("end_time")
-        status = attrs.get("status", AppointmentSlot.Status.AVAILABLE)
+        instance = self.instance
 
-        if date < timezone.localdate():
+        date = attrs.get(
+            "date",
+            instance.date if instance else None,
+        )
+
+        start_time = attrs.get(
+            "start_time",
+            instance.start_time if instance else None,
+        )
+
+        end_time = attrs.get(
+            "end_time",
+            instance.end_time if instance else None,
+        )
+
+        status = attrs.get(
+            "status",
+            instance.status if instance else AppointmentSlot.Status.AVAILABLE,
+        )
+
+        today = timezone.localdate()
+
+        if date < today:
             raise serializers.ValidationError(
                 {
-                    "date": "Appointment date cannot be in the past."
+                    "date": (
+                        "Appointment date cannot be in the past."
+                    )
                 }
             )
 
         if start_time >= end_time:
             raise serializers.ValidationError(
                 {
-                    "end_time": "End time must be after start time."
+                    "end_time": (
+                        "End time must be after start time."
+                    )
                 }
             )
 
-        if not (schedule.start_date <= date <= schedule.end_date):
+        if not (
+            schedule.start_date
+            <= date
+            <= schedule.end_date
+        ):
             raise serializers.ValidationError(
                 {
                     "date": (
-                        "Appointment date must be within the "
-                        "schedule date range."
+                        "Appointment date must be within "
+                        "the schedule date range."
                     )
                 }
             )
 
         now = timezone.localtime()
-        if date == now.date() and start_time < now.time():
+
+        if (
+            date == now.date()
+            and start_time < now.time()
+        ):
             raise serializers.ValidationError(
                 {
                     "start_time": (
-                        "Appointment start time cannot be in the past."
+                        "Appointment start time cannot "
+                        "be in the past."
                     )
                 }
             )
 
-        if status not in [
-            AppointmentSlot.Status.AVAILABLE,
-            AppointmentSlot.Status.BOOKED,
-            AppointmentSlot.Status.CANCELED,
-        ]:
+        if status not in AppointmentSlot.Status.values:
             raise serializers.ValidationError(
                 {
                     "status": "Invalid slot status."
                 }
             )
 
-        slots = AppointmentSlot.objects.filter(
+        queryset = AppointmentSlot.objects.filter(
             schedule=schedule,
             date=date,
             start_time__lt=end_time,
             end_time__gt=start_time,
         )
 
-        if slots.exists():
+        if instance:
+            queryset = queryset.exclude(pk=instance.pk)
+
+        if queryset.exists():
             raise serializers.ValidationError(
                 {
                     "start_time": (
-                        "This appointment slot overlaps with "
-                        "another slot."
+                        "This appointment slot overlaps "
+                        "with another slot."
                     )
                 }
             )
 
         return attrs
 
+
 class AppointmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-
-        fields = []
+        fields = ()
 
     def validate(self, attrs):
-
         slot = self.context["slot"]
         student = self.context["request"].user
 
-        if slot.status != slot.SlotStatus.AVAILABLE:
+        if (
+            slot.status
+            != AppointmentSlot.Status.AVAILABLE
+        ):
             raise serializers.ValidationError(
                 {
-                    "slot": "This appointment slot is not available."
+                    "slot": (
+                        "This appointment slot is not available."
+                    )
                 }
             )
 
@@ -188,7 +243,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError(
                 {
-                    "slot": "This appointment slot has already started."
+                    "slot": (
+                        "This appointment slot has already started."
+                    )
                 }
             )
 
@@ -204,7 +261,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 {
                     "slot": (
                         "You already have another appointment "
-                        "at this time."
+                        "during this time."
                     )
                 }
             )

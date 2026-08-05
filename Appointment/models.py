@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from Accounts.models import CustomUser
 
@@ -45,6 +46,14 @@ class Schedule(models.Model):
             f"{self.advisor.email} | "
             f"{self.start_date} -> {self.end_date}"
         )
+
+    def clean(self):
+        super().clean()
+
+        if self.advisor_id and self.advisor.type != CustomUser.Types.ADMIN:
+            raise ValidationError(
+                {"advisor": "The advisor must be an admin user."}
+            )
 
 
 class AppointmentSlot(models.Model):

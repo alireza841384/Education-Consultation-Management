@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from Accounts.models import CustomUser
+
 from .models import Appointment, AppointmentSlot, Schedule
 
 
@@ -23,6 +25,17 @@ class ScheduleAdmin(admin.ModelAdmin):
     ordering = (
         "-start_date",
     )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "advisor":
+            kwargs["queryset"] = CustomUser.objects.exclude(
+                type=CustomUser.Types.STUDENT
+            )
+        return super().formfield_for_foreignkey(
+            db_field,
+            request,
+            **kwargs,
+        )
 
 
 @admin.register(AppointmentSlot)

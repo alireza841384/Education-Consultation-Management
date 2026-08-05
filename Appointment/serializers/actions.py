@@ -51,6 +51,9 @@ class GenerateSlotsSerializer(serializers.Serializer):
         many=True,
         allow_empty=False,
     )
+    date_start=serializers.DateField(required=False,allow_null=True,default=None)
+    date_end=serializers.DateField(required=False,allow_null=True,default=None)
+
 
     def validate(self, attrs):
         ranges = attrs["ranges"]
@@ -68,6 +71,8 @@ class GenerateSlotsSerializer(serializers.Serializer):
                     }
                 )
 
+        if attrs.get("date_start") and attrs.get("date_end") and attrs["date_start"]>attrs["date_end"]:
+            raise serializers.ValidationError({"date_end":"date_end must be greater than or equal to date_start."})
         return attrs
 
 

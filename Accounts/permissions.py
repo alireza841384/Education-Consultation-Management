@@ -1,19 +1,48 @@
-from rest_framework.permissions import BasePermission , SAFE_METHODS
-from .models import CustomUser
+from rest_framework.permissions import SAFE_METHODS, BasePermission
+
+from Accounts.models import CustomUser
+
 
 class IsAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.type == CustomUser.Types.ADMIN
+    message = "Admin access is required to perform this action."
 
-class IsStudent(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.type == CustomUser.Types.STUDENT
+        return (
+            request.user.is_authenticated
+            and request.user.type == CustomUser.Types.ADMIN
+        )
 
-class IsOwnerOrAdmin(BasePermission):
+
+class IsScheduleAdvisorOwnerOrAdmin(BasePermission):
+    message = "Only the advisor who owns this schedule can perform this action."
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
     def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+
         if request.user.type == CustomUser.Types.ADMIN:
             return True
-        return obj.user == request.user
+
+        return obj.advisor_id == request.user.id
+
+
+class IsSlotAdvisorOwnerOrAdmin(BasePermission):
+    message = "Only the advisor who owns this slot can perform this action."
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+
+        if request.user.type == CustomUser.Types.ADMIN:
+            return True
+
+        return obj.schedule.advisor_id == request.user.id
 
 class IsAdvisorOwner(BasePermission):
     def has_permission(self, request, view):
@@ -24,9 +53,3 @@ class IsAdvisorOwner(BasePermission):
             request.user.is_authenticated
             and request.user.type == CustomUser.Types.ADMIN
         )
-
-    def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-
-        return obj.advisor == request.user

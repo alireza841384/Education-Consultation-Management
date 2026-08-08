@@ -11,6 +11,7 @@ from Appointment.serializers.schedule import ScheduleSerializer
 from Appointment.utils.mixins import BulkDeleteSlotMixin
 
 from .models import AppointmentSlot, Schedule
+from .services.slot_generation import SlotGenerationService 
 
 
 class ScheduleViewSet(viewsets.ModelViewSet):

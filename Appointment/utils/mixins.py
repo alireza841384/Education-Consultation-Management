@@ -6,7 +6,7 @@ from rest_framework.response import Response
 class BulkDeleteSlotMixin:
     @action(detail=False, methods=["post"], url_path="bulk-delete")
     def bulk_delete(self , request , *args , **kwargs):
-        ids = request.data.get(ids , [])
+        ids = request.data.get("ids", [])
         if not ids:
             return Response({"detail" :
                              "No IDs provided."}, status=status.HTTP_400_BAD_REQUEST)

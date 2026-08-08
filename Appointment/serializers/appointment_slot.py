@@ -13,8 +13,6 @@ class AppointmentSlotSerializer(serializers.ModelSerializer):
             "date",
             "start_time",
             "end_time",
-            "date_start",
-            "date_end",
             "status",
         )
 

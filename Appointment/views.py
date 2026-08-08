@@ -1,16 +1,16 @@
-from rest_framework import status
-from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from Accounts.models import CustomUser
 from Accounts.permissions import IsAdvisorOwner
+from Appointment.serializers.actions import GenerateSlotsSerializer
+from Appointment.serializers.appointment_slot import AppointmentSlotSerializer
+from Appointment.serializers.schedule import ScheduleSerializer
+from Appointment.utils.mixins import BulkDeleteSlotMixin
 
-from .models import Schedule
-from .serializers.actions import GenerateSlotsSerializer
-from .serializers.schedule import ScheduleSerializer
-from .services.slot_generation import SlotGenerationService
-from rest_framework import serializers
+from .models import AppointmentSlot, Schedule
 
 
 class ScheduleViewSet(viewsets.ModelViewSet):
@@ -96,3 +96,36 @@ class ScheduleViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class SlotViewSet(BulkDeleteSlotMixin,
+                  mixins.CreateModelMixin,
+                  mixins.DestroyModelMixin,
+                  mixins.ListModelMixin,
+                  viewsets.GenericViewSet):
+    queryset = AppointmentSlot.objects.select_related("schedule", "schedule__advisor")
+    serializer_class = AppointmentSlotSerializer
+    permission_classes = (IsAdvisorOwner,)
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.type == CustomUser.Types.ADMIN:
+            return self.queryset.filter(schedule__advisor=user)
+
+        return self.queryset.filter(
+            schedule__advisor=user.profile.advisor,
+            schedule__status=Schedule.Status.PUBLISHED,
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["schedule"] = get_object_or_404(Schedule, pk=self.kwargs["schedule_pk"])
+        return context
+
+    def perform_destroy(self, instance):
+        if instance.schedule.status != Schedule.Status.DRAFT:
+            raise serializers.ValidationError(
+                "Slots can only be deleted from a draft schedule."
+            )
+        instance.delete()

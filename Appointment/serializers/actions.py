@@ -1,7 +1,6 @@
 """
     ├── GenerateSlotsSerializer
     ├── PreviewSlotsSerializer
-    ├── CopySlotsSerializer
     ├── BulkStatusSerializer
     ├── BulkDeleteSerializer
     ├── ClearFreeSlotsSerializer
@@ -73,39 +72,4 @@ class GenerateSlotsSerializer(serializers.Serializer):
 
         if attrs.get("date_start") and attrs.get("date_end") and attrs["date_start"]>attrs["date_end"]:
             raise serializers.ValidationError({"date_end":"date_end must be greater than or equal to date_start."})
-        return attrs
-
-
-class CopySlotsSerializer(serializers.Serializer):
-    source_date = serializers.DateField(
-        help_text="The date whose slots should be copied."
-    )
-
-    target_dates = serializers.ListField(
-        child=serializers.DateField(),
-        allow_empty=False,
-        help_text="Dates that will receive copies of the source day's slots.",
-    )
-
-    def validate_target_dates(self, value):
-        if len(value) != len(set(value)):
-            raise serializers.ValidationError(
-                "Target dates must be unique."
-            )
-
-        return value
-
-    def validate(self, attrs):
-        source_date = attrs["source_date"]
-        target_dates = attrs["target_dates"]
-
-        if source_date in target_dates:
-            raise serializers.ValidationError(
-                {
-                    "target_dates": (
-                        "Source date cannot be included in target dates."
-                    )
-                }
-            )
-
         return attrs

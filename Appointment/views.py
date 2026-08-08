@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -110,18 +111,27 @@ class SlotViewSet(BulkDeleteSlotMixin,
 
     def get_queryset(self):
         user = self.request.user
-
+        schedule_pk = self.kwargs.get("schedule_pk")
+        if not schedule_pk:
+            raise ValidationError({
+                "detail": "Schedule ID is required in the URL."
+            })
+        schedule = get_object_or_404(Schedule, pk=schedule_pk)
         if user.type == CustomUser.Types.ADMIN:
-            return self.queryset.filter(schedule__advisor=user)
+            return self.queryset.filter(schedule=schedule,schedule__advisor=user)
 
         return self.queryset.filter(
+            schedule=schedule,
             schedule__advisor=user.profile.advisor,
             schedule__status=Schedule.Status.PUBLISHED,
         )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["schedule"] = get_object_or_404(Schedule, pk=self.kwargs["schedule_pk"])
+        schedule_pk = self.kwargs.get("schedule_pk")
+        if schedule_pk:
+            schedule = get_object_or_404(Schedule, pk=schedule_pk)
+            context["schedule"] = schedule
         return context
 
     def perform_destroy(self, instance):

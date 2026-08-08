@@ -8,7 +8,7 @@ from Accounts.permissions import IsAdvisorOwner
 
 from .models import Schedule
 from .serializers.actions import GenerateSlotsSerializer
-from .serializers.model_serializers import ScheduleSerializer
+from .serializers.schedule import ScheduleSerializer
 from .services.slot_generation import SlotGenerationService
 from rest_framework import serializers
 

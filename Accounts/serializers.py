@@ -57,3 +57,20 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm', None)
         user = CustomUser.objects.create_user(**validated_data)
         return user
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    """Serializer for the first step: receive the user's email."""
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for the second step: verify token and set the new password."""
+    email = serializers.EmailField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        # Apply AUTH_PASSWORD_VALIDATORS rules from settings
+        validate_password(value)
+        return value

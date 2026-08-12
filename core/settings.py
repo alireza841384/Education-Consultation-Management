@@ -153,3 +153,23 @@ MAX_REPORT_FILE_SIZE = 2 * 1024 * 1024
 ALLOWED_REPORT_EXTENSIONS = [
     ".pdf",
 ]
+
+
+
+
+# ---------- Email ----------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "your-email@gmail.com"
+EMAIL_HOST_PASSWORD = "your-app-password"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# ---------- Password reset ----------
+FRONTEND_URL = "http://localhost:5173"
+PASSWORD_RESET_TIMEOUT = 3600  # seconds (1 hour); Django default is 3 days
+
+# Add these keys to DEFAULT_THROTTLE_RATES:
+# "password_reset": "5/hour",
+# "password_reset_confirm": "10/hour",

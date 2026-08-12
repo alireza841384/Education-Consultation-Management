@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views import ScheduleViewSet, SlotViewSet
+from .views import ChangeSlotStatusView, ScheduleViewSet, SlotViewSet
 
 app_name='Appointment'
 
@@ -34,5 +34,10 @@ urlpatterns=[
             'post':'bulk_delete',
         }),
         name='slot-bulk-delete',
+    ),
+    path(
+        "slots/<int:slot_id>/status/",
+        ChangeSlotStatusView.as_view(),
+        name="change-slot-status",
     ),
 ]

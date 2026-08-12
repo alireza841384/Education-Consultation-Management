@@ -101,6 +101,15 @@ class AppointmentSlot(models.Model):
         )
 
 class Appointment(models.Model):
+    class AppointmentStatus(models.TextChoices):
+        BOOKED = "booked", "Booked"
+        CANCELED = "canceled", "Canceled"
+
+    status = models.CharField(
+        max_length=20,
+        choices=AppointmentStatus.choices,
+        default=AppointmentStatus.BOOKED,
+        )
 
     student = models.ForeignKey(
         CustomUser,
@@ -111,7 +120,7 @@ class Appointment(models.Model):
     slot = models.OneToOneField(
         AppointmentSlot,
         on_delete=models.CASCADE,
-        related_name="appointment",
+        related_name="appointments",
     )
 
     created_at = models.DateTimeField(

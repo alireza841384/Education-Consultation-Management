@@ -1,14 +1,17 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from Accounts.models import CustomUser
 from Accounts.permissions import IsAdvisorOwner
-from Appointment.serializers.actions import GenerateSlotsSerializer
+from Appointment.serializers.actions import ChangeSlotStatusSerializer, GenerateSlotsSerializer
 from Appointment.serializers.appointment_slot import AppointmentSlotSerializer
 from Appointment.serializers.schedule import ScheduleSerializer
+from Appointment.services.change_slot_status import SlotStatusService
 from Appointment.utils.mixins import BulkDeleteSlotMixin
 
 from .models import AppointmentSlot, Schedule
@@ -140,3 +143,33 @@ class SlotViewSet(BulkDeleteSlotMixin,
                 "Slots can only be deleted from a draft schedule."
             )
         instance.delete()
+
+
+
+class ChangeSlotStatusView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, slot_id):
+
+        serializer = ChangeSlotStatusSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        slot = SlotStatusService.change_status(
+            slot_id=slot_id,
+            user=request.user,
+            new_status=serializer.validated_data["status"],
+        )
+
+        return Response(
+            {
+                "id": slot.id,
+                "status": slot.status,
+            },
+            status=status.HTTP_200_OK,
+        )

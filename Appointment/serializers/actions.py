@@ -8,6 +8,9 @@
 """
 from rest_framework import serializers
 
+from Appointment.models import AppointmentSlot
+
+
 
 class TimeRangeSerializer(serializers.Serializer):
     start_time = serializers.TimeField()
@@ -73,3 +76,9 @@ class GenerateSlotsSerializer(serializers.Serializer):
         if attrs.get("date_start") and attrs.get("date_end") and attrs["date_start"]>attrs["date_end"]:
             raise serializers.ValidationError({"date_end":"date_end must be greater than or equal to date_start."})
         return attrs
+
+
+class ChangeSlotStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=AppointmentSlot.SlotStatus.choices,
+    )

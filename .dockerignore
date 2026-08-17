@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment and secrets
+.env
+*.env
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS and misc
+.DS_Store
+*.log
+db.sqlite3
+staticfiles/
+mediafiles/

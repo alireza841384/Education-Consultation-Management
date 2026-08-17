@@ -21,3 +21,6 @@ ENV/
 # IDEs
 .idea/
 .vscode/
+# Docker and Django generated files
+staticfiles/
+*.log

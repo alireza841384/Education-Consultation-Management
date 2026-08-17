@@ -14,22 +14,21 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-load_dotenv()
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR=Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-uxjg$=4$2*p2@nq6y@^n$dbnd9(b^p3my4z5xzuvak#&1jcc$h'
+SECRET_KEY=os.getenv("DJANGO_SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG=os.getenv("DJANGO_DEBUG","False").lower()=="true"
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS=[
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS","").split(",")
+    if host.strip()
+]
 
 # Application definition
 
@@ -96,16 +95,17 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+DATABASES={
+    "default":{
+        "ENGINE":"django.db.backends.postgresql",
+        "NAME":os.getenv("DB_NAME"),
+        "USER":os.getenv("DB_USER"),
+        "PASSWORD":os.getenv("DB_PASSWORD"),
+        "HOST":os.getenv("DB_HOST","127.0.0.1"),
+        "PORT":os.getenv("DB_PORT","5432"),
     }
 }
+
 
 
 
@@ -142,11 +142,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
+STATIC_URL="/static/"
+STATIC_ROOT=BASE_DIR / "staticfiles"
 
-STATIC_URL = 'static/'
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL="/media/"
+MEDIA_ROOT=BASE_DIR / "media"
 
 MAX_REPORT_FILE_SIZE = 2 * 1024 * 1024
 
@@ -158,17 +158,19 @@ ALLOWED_REPORT_EXTENSIONS = [
 
 
 # ---------- Email ----------
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "your-email@gmail.com"
-EMAIL_HOST_PASSWORD = "your-app-password"
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_BACKEND=os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST=os.getenv("EMAIL_HOST","smtp.gmail.com")
+EMAIL_PORT=int(os.getenv("EMAIL_PORT","587"))
+EMAIL_USE_TLS=os.getenv("EMAIL_USE_TLS","True").lower()=="true"
+EMAIL_HOST_USER=os.getenv("EMAIL_HOST_USER","")
+EMAIL_HOST_PASSWORD=os.getenv("EMAIL_HOST_PASSWORD","")
+DEFAULT_FROM_EMAIL=os.getenv("DEFAULT_FROM_EMAIL",EMAIL_HOST_USER)
 
-# ---------- Password reset ----------
-FRONTEND_URL = "http://localhost:5173"
-PASSWORD_RESET_TIMEOUT = 3600  # seconds (1 hour); Django default is 3 days
+FRONTEND_URL=os.getenv("FRONTEND_URL","http://localhost:5173")
+PASSWORD_RESET_TIMEOUT=3600
 
 # Add these keys to DEFAULT_THROTTLE_RATES:
 # "password_reset": "5/hour",

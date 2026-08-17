@@ -53,7 +53,7 @@ class RequestPasswordResetView(APIView):
             return Response({"detail": "If an account exists with this email, a reset link has been sent."})
 
         token = default_token_generator.make_token(user)
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?email={user.email}&token={token}"
+        reset_url = f"{settings.FRONTEND_URL}/confirm-reset?email={user.email}&token={token}"
 
         send_mail(
             subject="Password Reset",

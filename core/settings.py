@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'Accounts',
     'Appointment',
+    "drf_spectacular",
 ]
 AUTH_USER_MODEL = "Accounts.CustomUser"
 
@@ -60,6 +61,8 @@ REST_FRAMEWORK = {
         "anon": "20/min",
         "user": "300/hour",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
 }
 
 MIDDLEWARE = [
@@ -175,3 +178,10 @@ PASSWORD_RESET_TIMEOUT=3600
 # Add these keys to DEFAULT_THROTTLE_RATES:
 # "password_reset": "5/hour",
 # "password_reset_confirm": "10/hour",
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Education Consultation Management API",
+    "DESCRIPTION": "API documentation for the Education Consultation Management system.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}

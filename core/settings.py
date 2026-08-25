@@ -17,21 +17,28 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
-BASE_DIR=Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY=os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-DEBUG=os.getenv("DJANGO_DEBUG","False").lower()=="true"
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS=[
+ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS","").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
     if host.strip()
 ]
+
+
+CORS_ALLOWED_ORIGINS=[
+    'http://127.0.0.1:8001',
+    'http://localhost:8001',
+]
+
 
 # Application definition
 
@@ -46,21 +53,22 @@ INSTALLED_APPS = [
     'Accounts',
     'Appointment',
     "drf_spectacular",
+    'corsheaders',
 ]
 AUTH_USER_MODEL = "Accounts.CustomUser"
 
 REST_FRAMEWORK = {
-        "DEFAULT_AUTHENTICATION_CLASSES": (
+    "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-        "DEFAULT_PERMISSION_CLASSES": (
+    "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
-        "DEFAULT_THROTTLE_CLASSES": (
+    "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ),
-        "DEFAULT_THROTTLE_RATES": {
+    "DEFAULT_THROTTLE_RATES": {
         "anon": "20/min",
         "user": "300/hour",
     },
@@ -69,6 +77,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -110,9 +119,6 @@ DATABASES = {
 }
 
 
-
-
-
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -146,11 +152,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
-STATIC_URL="/static/"
-STATIC_ROOT=BASE_DIR / "staticfiles"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-MEDIA_URL="/media/"
-MEDIA_ROOT=BASE_DIR / "media"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 MAX_REPORT_FILE_SIZE = 2 * 1024 * 1024
 
@@ -159,22 +165,20 @@ ALLOWED_REPORT_EXTENSIONS = [
 ]
 
 
-
-
 # ---------- Email ----------
-EMAIL_BACKEND=os.getenv(
+EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend",
 )
-EMAIL_HOST=os.getenv("EMAIL_HOST","smtp.gmail.com")
-EMAIL_PORT=int(os.getenv("EMAIL_PORT","587"))
-EMAIL_USE_TLS=os.getenv("EMAIL_USE_TLS","True").lower()=="true"
-EMAIL_HOST_USER=os.getenv("EMAIL_HOST_USER","")
-EMAIL_HOST_PASSWORD=os.getenv("EMAIL_HOST_PASSWORD","")
-DEFAULT_FROM_EMAIL=os.getenv("DEFAULT_FROM_EMAIL",EMAIL_HOST_USER)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
-FRONTEND_URL=os.getenv("FRONTEND_URL","http://localhost:5173")
-PASSWORD_RESET_TIMEOUT=3600
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+PASSWORD_RESET_TIMEOUT = 3600
 
 # Add these keys to DEFAULT_THROTTLE_RATES:
 # "password_reset": "5/hour",
